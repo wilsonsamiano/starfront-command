@@ -92,6 +92,8 @@ class Unit(
     var target: Damageable? = null
     var waypointIndex: Int = 0 // enemies only: progress along the lane
     var selected: Boolean = false
+    var facing: Float = 0f // radians, 0 = +x
+    var flash: Float = 0f // muzzle-flash timer
 }
 
 class Building(
@@ -117,6 +119,8 @@ class Building(
     val trainQueue: ArrayDeque<UnitKind> = ArrayDeque()
     var trainProgress: Float = 0f
     var selected: Boolean = false
+    var turretAngle: Float = 0f // radians, 0 = +x
+    var flash: Float = 0f // muzzle-flash timer
 }
 
 class Projectile(
@@ -129,4 +133,6 @@ class Projectile(
     val color: Int
 ) {
     var dead: Boolean = false
+    var px: Float = x
+    var py: Float = y
 }

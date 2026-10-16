@@ -1,5 +1,6 @@
 package com.wilson.starfront
 
+import kotlin.math.atan2
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -40,6 +41,7 @@ class Game {
     var won = false
     var speed = 1f
     var paused = false
+    var time = 0f
 
     private var nextId = 1
     private val spawnQueue: ArrayDeque<UnitKind> = ArrayDeque()
@@ -145,6 +147,7 @@ class Game {
 
     fun update(dt: Float) {
         if (gameOver || paused) return
+        time += dt
 
         if (phase == Phase.BUILD) {
             phaseTimer -= dt
@@ -188,6 +191,7 @@ class Game {
         if (!u.isAlive) return
         val s = u.stats
         u.cooldown = max(0f, u.cooldown - dt)
+        u.flash = max(0f, u.flash - dt)
 
         val cur = u.target
         if (cur != null && (!cur.isAlive || dist(u.x, u.y, cur.x, cur.y) > s.aggroRange + 80f)) {
@@ -201,6 +205,7 @@ class Game {
         if (t != null) {
             val d = dist(u.x, u.y, t.x, t.y)
             if (d <= s.range + t.radius) {
+                u.facing = atan2(t.y - u.y, t.x - u.x)
                 if (u.cooldown <= 0f) {
                     if (s.ranged) {
                         val color = if (u.team == Team.PLAYER) 0xFF7FC4FFL.toInt() else 0xFFFF7F7FL.toInt()
@@ -208,6 +213,7 @@ class Game {
                     } else {
                         t.hp -= s.damage
                     }
+                    u.flash = 0.12f
                     u.cooldown = s.attackPeriod
                 }
             } else {
@@ -242,6 +248,7 @@ class Game {
         val dy = ty - u.y
         val d = sqrt(dx * dx + dy * dy)
         if (d < 4f) return true
+        u.facing = atan2(dy, dx)
         val step = min(u.stats.speed * dt, d)
         u.x += dx / d * step
         u.y += dy / d * step
@@ -291,11 +298,16 @@ class Game {
             return
         }
         b.cooldown = max(0f, b.cooldown - dt)
-        if (b.kind == BuildingKind.MG_TURRET && b.cooldown <= 0f) {
+        b.flash = max(0f, b.flash - dt)
+        if (b.kind == BuildingKind.MG_TURRET) {
             val target = nearestEnemy(b.x, b.y, b.stats.range)
             if (target != null) {
-                projectiles.add(Projectile(b.x, b.y - 10f, target, 900f, b.stats.damage, b.team, 0xFFFFD27FL.toInt()))
-                b.cooldown = b.stats.attackPeriod
+                b.turretAngle = atan2(target.y - b.y, target.x - b.x)
+                if (b.cooldown <= 0f) {
+                    projectiles.add(Projectile(b.x, b.y - 10f, target, 900f, b.stats.damage, b.team, 0xFFFFD27FL.toInt()))
+                    b.cooldown = b.stats.attackPeriod
+                    b.flash = 0.12f
+                }
             }
         }
         if (b.kind == BuildingKind.BARRACKS && b.trainQueue.isNotEmpty()) {
@@ -327,6 +339,8 @@ class Game {
             p.target.hp -= p.damage
             p.dead = true
         } else {
+            p.px = p.x
+            p.py = p.y
             p.x += dx / d * step
             p.y += dy / d * step
         }
