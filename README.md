@@ -1,5 +1,7 @@
 # Starfront Command — M1 Prototype
 
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow)](https://buymeacoffee.com/wilsonsamiano)
+
 Touchscreen-first real-time strategy for Android. **M1 slice:** Terran-only tower
 defense — one lane, 10 waves, unlimited resources, Logistics cap as the pacing
 constraint. Survive all 10 waves (boss on wave 10) without losing your Command Core.
@@ -43,6 +45,23 @@ All in `Entities.kt` (`Stats` object) and `Game.kt` (companion constants):
 
 Open in Android Studio (it will fetch the Gradle distribution on first sync),
 then **Build > Build APK(s)**. Or build via Grok Build — see `GROK_BUILD_STEPS.md`.
+
+## In-app updates
+
+The game checks `https://api.github.com/repos/wilsonsamiano/starfront-command/releases/latest`
+on launch. If a release tag is newer than the installed build, it offers a
+one-tap download + install (same signing key required — see signing below).
+
+**Shipping an update:**
+1. Bump `versionCode` (+1) and `versionName` in `app/build.gradle`.
+2. Build the signed release APK (same keystore, every time).
+3. Create a GitHub release tagged `vN` where **N = the new versionCode**
+   (e.g. `versionCode 3` → tag `v3`), and attach the APK to the release.
+4. Players get the update prompt on next launch.
+
+## Support
+
+If you enjoy the game, support development: https://buymeacoffee.com/wilsonsamiano
 
 ## Roadmap
 

@@ -212,6 +212,30 @@ class Renderer {
         return rightX - bw - 12f
     }
 
+    private fun panelButton(
+        canvas: Canvas,
+        ui: UiState,
+        id: String,
+        label: String,
+        centerX: Float,
+        top: Float,
+        bw: Float = 440f,
+        bh: Float = 76f
+    ): Float {
+        val r = RectF(centerX - bw / 2f, top, centerX + bw / 2f, top + bh)
+        fill.color = bodyColor
+        canvas.drawRoundRect(r, 16f, 16f, fill)
+        stroke.color = playerColor
+        stroke.strokeWidth = 3f
+        canvas.drawRoundRect(r, 16f, 16f, stroke)
+        text.textSize = 30f
+        text.color = Color.WHITE
+        text.textAlign = Paint.Align.CENTER
+        canvas.drawText(label, r.centerX(), r.centerY() + 10f, text)
+        ui.buttons.add(UiState.HudButton(id, label, r))
+        return top + bh + 18f
+    }
+
     private fun drawHud(canvas: Canvas, game: Game, ui: UiState, w: Int, h: Int) {
         ui.buttons.clear()
 
@@ -233,7 +257,8 @@ class Renderer {
 
         var bx = w.toFloat() - 20f
         bx = addButton(canvas, ui, "pause", if (game.paused) "\u25B6" else "I I", bx, 12f)
-        addButton(canvas, ui, "speed", "${game.speed.toInt()}x", bx, 12f)
+        bx = addButton(canvas, ui, "speed", "${game.speed.toInt()}x", bx, 12f)
+        addButton(canvas, ui, "info", "i", bx, 12f)
 
         if (game.phase == Game.Phase.BUILD && !game.gameOver) {
             val bw = 300f
@@ -307,6 +332,43 @@ class Renderer {
             text.textAlign = Paint.Align.CENTER
             canvas.drawText(ui.message, w / 2f, 190f, text)
             text.color = Color.WHITE
+        }
+
+        // info panel (version, support, updates)
+        if (ui.showInfo) {
+            fill.color = 0xAA000000L.toInt()
+            canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), fill)
+            val pw = 660f
+            val ph = 500f
+            val r = RectF(w / 2f - pw / 2f, h / 2f - ph / 2f, w / 2f + pw / 2f, h / 2f + ph / 2f)
+            fill.color = 0xFF141B33L.toInt()
+            canvas.drawRoundRect(r, 24f, 24f, fill)
+            stroke.color = playerColor
+            stroke.strokeWidth = 4f
+            canvas.drawRoundRect(r, 24f, 24f, stroke)
+
+            text.textAlign = Paint.Align.CENTER
+            text.color = Color.WHITE
+            text.textSize = 44f
+            canvas.drawText("Starfront Command", w / 2f, r.top + 82f, text)
+            text.textSize = 29f
+            text.color = 0xFF9FB3D9L.toInt()
+            canvas.drawText(
+                "Beta ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
+                w / 2f, r.top + 132f, text
+            )
+            if (ui.updateStatus.isNotEmpty()) {
+                text.textSize = 28f
+                text.color = 0xFFFFD27FL.toInt()
+                canvas.drawText(ui.updateStatus, w / 2f, r.top + 178f, text)
+            }
+
+            var by = r.top + 214f
+            by = panelButton(canvas, ui, "bmc", "\u2615 Buy me a coffee", w / 2f, by)
+            val updateId = if (ui.pendingUpdate != null) "downloadUpdate" else "checkUpdate"
+            val updateLabel = if (ui.pendingUpdate != null) "Download update ${ui.pendingUpdate!!.tag}" else "Check for updates"
+            by = panelButton(canvas, ui, updateId, updateLabel, w / 2f, by)
+            panelButton(canvas, ui, "closeInfo", "Close", w / 2f, by)
         }
 
         // game over overlay

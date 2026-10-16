@@ -45,6 +45,16 @@ above. Pull/re-clone to pick up new commits.
 5. Long-press ground → "Attack-move" toast → units engage on the way.
 6. Pinch to zoom, two-finger drag to pan, tap minimap to jump.
 
+## Shipping an update (so the in-app updater picks it up)
+
+1. Bump `versionCode` (+1) and `versionName` in `app/build.gradle`.
+2. Build the signed release APK with the same keystore as always.
+3. On GitHub, create a release tagged `vN` where **N = the new versionCode**
+   (e.g. `versionCode 3` → tag `v3`) and attach the APK to the release.
+4. Installed copies check `releases/latest` on launch and offer one-tap
+   download + install. Same signing key = installs over the old version,
+   no uninstall needed.
+
 ## If the build fails
 
 - **Gradle sync errors**: make sure Grok Build uses Gradle 8.7+ and JDK 17.

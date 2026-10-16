@@ -35,4 +35,9 @@ class UiState {
 
     var message: String = ""
     var messageTimer: Float = 0f
+
+    // info panel (version, Buy Me a Coffee, updates)
+    var showInfo: Boolean = false
+    var pendingUpdate: UpdateInfo? = null
+    var updateStatus: String = ""
 }

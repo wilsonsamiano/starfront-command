@@ -1,7 +1,9 @@
 package com.wilson.starfront
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Canvas
+import android.net.Uri
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -266,6 +268,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     return
                 }
             }
+            // info panel open: taps outside its buttons just close it
+            if (ui.showInfo) {
+                ui.showInfo = false
+                return
+            }
             if (game.gameOver) {
                 game.reset()
                 clearSelection()
@@ -419,6 +426,20 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             when {
                 id == "pause" -> game.paused = !game.paused
                 id == "speed" -> game.speed = if (game.speed < 1.5f) 2f else 1f
+                id == "info" -> ui.showInfo = true
+                id == "closeInfo" -> ui.showInfo = false
+                id == "bmc" -> {
+                    ui.showInfo = false
+                    openLink(AppLinks.BMC_URL)
+                }
+                id == "checkUpdate" -> manualCheck()
+                id == "downloadUpdate" -> {
+                    val update = ui.pendingUpdate
+                    if (update != null) {
+                        (context as MainActivity).startUpdateDownload(update.apkUrl)
+                        ui.updateStatus = "Downloading update ${update.tag}…"
+                    }
+                }
                 id == "startWave" -> {
                     game.startWave()
                     showMessage("Wave ${game.wave} incoming!")
@@ -449,5 +470,39 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private fun showMessage(msg: String) {
         ui.message = msg
         ui.messageTimer = 2.2f
+    }
+
+    /** Called (on the UI thread) when the launch check finds a newer release. */
+    fun showUpdateAvailable(info: UpdateInfo) {
+        synchronized(game) {
+            ui.pendingUpdate = info
+            ui.updateStatus = "Update ${info.tag} available — tap Download"
+            ui.showInfo = true
+        }
+    }
+
+    private fun manualCheck() {
+        ui.updateStatus = "Checking for updates…"
+        ui.pendingUpdate = null
+        UpdateManager.checkForUpdate { info ->
+            post {
+                synchronized(game) {
+                    if (info != null) {
+                        ui.pendingUpdate = info
+                        ui.updateStatus = "Update ${info.tag} available"
+                    } else {
+                        ui.updateStatus = "You're up to date"
+                    }
+                }
+            }
+        }
+    }
+
+    private fun openLink(url: String) {
+        try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (e: Exception) {
+            showMessage("Couldn't open link")
+        }
     }
 }
