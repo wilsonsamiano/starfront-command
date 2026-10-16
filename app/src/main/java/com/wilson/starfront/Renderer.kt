@@ -4,7 +4,6 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
 import kotlin.math.cos
@@ -44,6 +43,46 @@ class Renderer {
     // Pre-rendered static terrain (drawn once, blitted per frame).
     private var bg: Bitmap? = null
     private val bgDst = RectF()
+
+    // Sprite art (StarCraft-style pixel art, loaded from drawable-nodpi).
+    private val spritePaint = Paint().apply { isAntiAlias = true; isFilterBitmap = false }
+    private data class Sprite(val bmp: Bitmap, val drawW: Float, val drawH: Float)
+    private var spriteCache: Map<String, Sprite>? = null
+
+    private fun sprites(): Map<String, Sprite> {
+        spriteCache?.let { return it }
+        fun load(name: String, drawW: Float): Sprite {
+            val bmp = Sprites.get(name)
+            return Sprite(bmp, drawW, drawW * bmp.height / bmp.width)
+        }
+        val m = mapOf(
+            "marine" to load("marine", 46f),
+            "ranger" to load("ranger", 46f),
+            "constructor" to load("constructor", 46f),
+            "bulwark" to load("bulwark", 84f),
+            "skitterling" to load("skitterling", 40f),
+            "spiker" to load("spiker", 58f),
+            "ravager" to load("ravager", 120f),
+            "hq" to load("hq", 130f),
+            "turret" to load("turret", 64f),
+            "barracks" to load("barracks", 120f)
+        )
+        spriteCache = m
+        return m
+    }
+
+    private fun unitSpriteName(kind: UnitKind): String = when (kind) {
+        UnitKind.MILITIA -> "marine"
+        UnitKind.RANGER -> "ranger"
+        UnitKind.BULWARK -> "bulwark"
+        UnitKind.CONSTRUCTOR -> "constructor"
+        UnitKind.SKITTERLING -> "skitterling"
+        UnitKind.SPIKER -> "spiker"
+        UnitKind.RAVAGER -> "ravager"
+    }
+
+    private fun centered(sp: Sprite, x: Float, y: Float) =
+        RectF(x - sp.drawW / 2f, y - sp.drawH / 2f, x + sp.drawW / 2f, y + sp.drawH / 2f)
 
     fun draw(canvas: Canvas, game: Game, ui: UiState, w: Int, h: Int) {
         canvas.drawColor(bgColor)
@@ -201,23 +240,20 @@ class Renderer {
             u.x + u.radius, u.y + u.radius * 0.6f + 6f, fill
         )
 
+        val sp = sprites()[unitSpriteName(u.kind)] ?: return
         canvas.save()
         canvas.translate(u.x, u.y)
         canvas.rotate(Math.toDegrees(u.facing.toDouble()).toFloat())
-        when (u.kind) {
-            UnitKind.MILITIA -> drawMarine(canvas)
-            UnitKind.RANGER -> drawRanger(canvas)
-            UnitKind.BULWARK -> drawBulwark(canvas)
-            UnitKind.CONSTRUCTOR -> drawConstructor(canvas)
-            UnitKind.SKITTERLING -> drawSkitterling(canvas, game.time * 16f + u.id)
-            UnitKind.SPIKER -> drawSpiker(canvas, game.time * 12f + u.id)
-            UnitKind.RAVAGER -> drawRavager(canvas, game.time * 8f + u.id)
-        }
+        canvas.drawBitmap(
+            sp.bmp, null,
+            RectF(-sp.drawW / 2f, -sp.drawH / 2f, sp.drawW / 2f, sp.drawH / 2f),
+            spritePaint
+        )
         canvas.restore()
 
         if (u.flash > 0f) {
             val a = (u.flash / 0.12f).coerceIn(0f, 1f)
-            val tipR = u.radius + 16f
+            val tipR = sp.drawW / 2f + 8f
             fill.color = 0xFFFFE08AL.toInt()
             fill.alpha = (230 * a).toInt()
             canvas.drawCircle(u.x + cos(u.facing) * tipR, u.y + sin(u.facing) * tipR, 5f + 9f * a, fill)
@@ -242,106 +278,6 @@ class Renderer {
         }
     }
 
-    private fun drawMarine(canvas: Canvas) {
-        fill.color = 0xFF2E4468L.toInt(); canvas.drawCircle(0f, 0f, 13f, fill)
-        fill.color = 0xFF5B7CC0L.toInt(); canvas.drawCircle(0f, 0f, 10f, fill)
-        fill.color = 0xFF3E5A8AL.toInt()
-        canvas.drawCircle(-3f, -9f, 5f, fill); canvas.drawCircle(-3f, 9f, 5f, fill)
-        fill.color = 0xFFBFE3FFL.toInt(); canvas.drawRect(2f, -4f, 9f, 4f, fill)
-        fill.color = 0xFF1A1A22L.toInt(); canvas.drawRect(7f, -2.5f, 30f, 2.5f, fill)
-    }
-
-    private fun drawRanger(canvas: Canvas) {
-        fill.color = 0xFF2E4468L.toInt(); canvas.drawCircle(0f, 0f, 12f, fill)
-        fill.color = 0xFF6FB7FFL.toInt(); canvas.drawCircle(0f, 0f, 9f, fill)
-        fill.color = 0xFFBFE3FFL.toInt(); canvas.drawRect(1f, -3.5f, 7f, 3.5f, fill)
-        fill.color = 0xFF1A1A22L.toInt(); canvas.drawRect(6f, -2f, 38f, 2f, fill)
-        fill.color = 0xFF8A93A8L.toInt(); canvas.drawRect(20f, -5f, 26f, -2f, fill)
-    }
-
-    private fun drawBulwark(canvas: Canvas) {
-        fill.color = 0xFF2A2F3AL.toInt()
-        canvas.drawRoundRect(-22f, -17f, 22f, -9f, 4f, 4f, fill)
-        canvas.drawRoundRect(-22f, 9f, 22f, 17f, 4f, 4f, fill)
-        fill.color = 0xFF7A8BA0L.toInt()
-        canvas.drawRoundRect(-20f, -12f, 20f, 12f, 6f, 6f, fill)
-        fill.color = 0xFF8FA3B8L.toInt(); canvas.drawCircle(0f, 0f, 9f, fill)
-        fill.color = 0xFF22222BL.toInt(); canvas.drawRect(5f, -3f, 36f, 3f, fill)
-        fill.color = 0xFFBFE3FFL.toInt(); canvas.drawCircle(0f, 0f, 3f, fill)
-    }
-
-    private fun drawConstructor(canvas: Canvas) {
-        fill.color = 0xFF8A6420L.toInt(); canvas.drawCircle(0f, 0f, 14f, fill)
-        fill.color = 0xFFD9A441L.toInt(); canvas.drawCircle(0f, 0f, 11f, fill)
-        fill.color = 0xFF6E4E14L.toInt(); canvas.drawCircle(0f, 0f, 5f, fill)
-        stroke.color = 0xFF6E4E14L.toInt(); stroke.strokeWidth = 4f
-        canvas.drawLine(8f, -8f, 20f, -20f, stroke)
-        fill.color = 0xFFD9A441L.toInt(); canvas.drawCircle(20f, -20f, 4f, fill)
-    }
-
-    private fun drawSkitterling(canvas: Canvas, ph: Float) {
-        stroke.color = 0xFF7E3542L.toInt(); stroke.strokeWidth = 3f
-        for (i in 0..2) {
-            val sway = sin(ph + i * 2.1f) * 5f
-            val bx = -8f + i * 7f
-            canvas.drawLine(bx, -7f, bx - 4f + sway, -16f, stroke)
-            canvas.drawLine(bx, 7f, bx - 4f - sway, 16f, stroke)
-        }
-        fill.color = 0xFFB04A5AL.toInt()
-        canvas.drawOval(-11f, -8f, 11f, 8f, fill)
-        stroke.color = 0xFF6E2A36L.toInt(); stroke.strokeWidth = 3f
-        canvas.drawLine(9f, -4f, 17f, -8f, stroke)
-        canvas.drawLine(9f, 4f, 17f, 8f, stroke)
-        fill.color = 0xFFFF6A6AL.toInt()
-        canvas.drawCircle(5f, -3f, 2.2f, fill); canvas.drawCircle(5f, 3f, 2.2f, fill)
-    }
-
-    private fun drawSpiker(canvas: Canvas, ph: Float) {
-        stroke.color = 0xFF6E2F52L.toInt(); stroke.strokeWidth = 4f
-        for (i in 0..2) {
-            val sway = sin(ph + i * 2.1f) * 6f
-            val bx = -11f + i * 9f
-            canvas.drawLine(bx, -9f, bx - 5f + sway, -20f, stroke)
-            canvas.drawLine(bx, 9f, bx - 5f - sway, 20f, stroke)
-        }
-        fill.color = 0xFF9A4A6EL.toInt()
-        canvas.drawOval(-15f, -10f, 15f, 10f, fill)
-        fill.color = 0xFFD98AA8L.toInt()
-        for (i in 0..3) {
-            val sx = -9f + i * 6f
-            val tri = Path()
-            tri.moveTo(sx - 3f, -6f); tri.lineTo(sx + 3f, -6f); tri.lineTo(sx, -16f); tri.close()
-            canvas.drawPath(tri, fill)
-        }
-        stroke.color = 0xFF5E2440L.toInt(); stroke.strokeWidth = 3f
-        canvas.drawLine(13f, -5f, 23f, -10f, stroke)
-        canvas.drawLine(13f, 5f, 23f, 10f, stroke)
-    }
-
-    private fun drawRavager(canvas: Canvas, ph: Float) {
-        stroke.color = 0xFF5A1A24L.toInt(); stroke.strokeWidth = 7f
-        for (i in 0..2) {
-            val sway = sin(ph + i * 2.1f) * 7f
-            val bx = -20f + i * 16f
-            canvas.drawLine(bx, -16f, bx - 8f + sway, -34f, stroke)
-            canvas.drawLine(bx, 16f, bx - 8f - sway, 34f, stroke)
-        }
-        fill.color = 0xFF8A2A35L.toInt()
-        canvas.drawOval(-30f, -20f, 30f, 20f, fill)
-        fill.color = 0xFFE08A8AL.toInt()
-        for (i in 0..4) {
-            val sx = -20f + i * 10f
-            val tri = Path()
-            tri.moveTo(sx - 4f, -14f); tri.lineTo(sx + 4f, -14f); tri.lineTo(sx, -30f); tri.close()
-            canvas.drawPath(tri, fill)
-        }
-        stroke.color = 0xFF3A0E16L.toInt(); stroke.strokeWidth = 5f
-        canvas.drawLine(24f, -8f, 40f, -14f, stroke)
-        canvas.drawLine(24f, 8f, 40f, 14f, stroke)
-        fill.color = 0xFFFF5A5AL.toInt()
-        canvas.drawCircle(16f, -7f, 3.5f, fill); canvas.drawCircle(16f, 7f, 3.5f, fill)
-    }
-
     // ---------------- buildings ----------------
 
     private fun drawBuilding(canvas: Canvas, b: Building, game: Game) {
@@ -350,9 +286,37 @@ class Renderer {
         fill.color = 0x55000000L.toInt()
         canvas.drawRoundRect(b.x - s, b.y - s + 8f, b.x + s, b.y + s + 8f, 14f, 14f, fill)
         when (b.kind) {
-            BuildingKind.COMMAND_CORE -> drawHQ(canvas, b, game)
-            BuildingKind.MG_TURRET -> drawTurret(canvas, b)
-            BuildingKind.BARRACKS -> drawBarracks(canvas, b, game)
+            BuildingKind.COMMAND_CORE -> {
+                val sp = sprites()["hq"]!!
+                canvas.drawBitmap(sp.bmp, null, centered(sp, b.x, b.y), spritePaint)
+            }
+            BuildingKind.BARRACKS -> {
+                val sp = sprites()["barracks"]!!
+                canvas.drawBitmap(sp.bmp, null, centered(sp, b.x, b.y), spritePaint)
+            }
+            BuildingKind.MG_TURRET -> {
+                val sp = sprites()["turret"]!!
+                canvas.save()
+                canvas.translate(b.x, b.y)
+                canvas.rotate(Math.toDegrees(b.turretAngle.toDouble()).toFloat())
+                canvas.drawBitmap(
+                    sp.bmp, null,
+                    RectF(-sp.drawW / 2f, -sp.drawH / 2f, sp.drawW / 2f, sp.drawH / 2f),
+                    spritePaint
+                )
+                canvas.restore()
+                if (b.flash > 0f) {
+                    val a = (b.flash / 0.12f).coerceIn(0f, 1f)
+                    fill.color = 0xFFFFE08AL.toInt()
+                    fill.alpha = (230 * a).toInt()
+                    canvas.drawCircle(
+                        b.x + cos(b.turretAngle) * (sp.drawW / 2f + 8f),
+                        b.y + sin(b.turretAngle) * (sp.drawW / 2f + 8f),
+                        5f + 9f * a, fill
+                    )
+                    fill.alpha = 255
+                }
+            }
         }
         if (b.selected) {
             stroke.color = Color.WHITE
@@ -381,76 +345,6 @@ class Renderer {
             fill.color = hpGood
             canvas.drawRect(b.x - w / 2f, top, b.x - w / 2f + w * (b.hp / b.maxHp), top + 8f, fill)
         }
-    }
-
-    private fun drawHQ(canvas: Canvas, b: Building, game: Game) {
-        val s = b.radius
-        fill.color = 0xFF3A4A68L.toInt()
-        canvas.drawRoundRect(b.x - s, b.y - s, b.x + s, b.y + s, 14f, 14f, fill)
-        stroke.color = playerColor
-        stroke.strokeWidth = 4f
-        canvas.drawRoundRect(b.x - s, b.y - s, b.x + s, b.y + s, 14f, 14f, stroke)
-        fill.color = 0xFF2C3852L.toInt()
-        canvas.drawRoundRect(b.x - s + 14f, b.y - s + 14f, b.x + s - 14f, b.y + s - 14f, 10f, 10f, fill)
-        val blink = game.time % 1f < 0.5f
-        fill.color = if (blink) hpGood else 0xFF2A6E46L.toInt()
-        val o = s - 8f
-        canvas.drawCircle(b.x - o, b.y - o, 4f, fill)
-        canvas.drawCircle(b.x + o, b.y - o, 4f, fill)
-        canvas.drawCircle(b.x - o, b.y + o, 4f, fill)
-        canvas.drawCircle(b.x + o, b.y + o, 4f, fill)
-        fill.color = 0xFF54688CL.toInt()
-        canvas.drawCircle(b.x, b.y, 16f, fill)
-        stroke.color = 0xFF8FA3B8L.toInt()
-        stroke.strokeWidth = 3f
-        canvas.drawLine(b.x, b.y - 16f, b.x, b.y - 34f, stroke)
-        fill.color = if (blink) 0xFFFF5A5AL.toInt() else 0xFF7E2A2AL.toInt()
-        canvas.drawCircle(b.x, b.y - 36f, 4f, fill)
-    }
-
-    private fun drawTurret(canvas: Canvas, b: Building) {
-        fill.color = 0xFF2A2F3AL.toInt()
-        canvas.drawCircle(b.x, b.y, 23f, fill)
-        fill.color = 0xFF4A5568L.toInt()
-        canvas.drawCircle(b.x, b.y, 18f, fill)
-        stroke.color = 0xFF6E7E96L.toInt()
-        stroke.strokeWidth = 3f
-        canvas.drawCircle(b.x, b.y, 18f, stroke)
-        canvas.save()
-        canvas.translate(b.x, b.y)
-        canvas.rotate(Math.toDegrees(b.turretAngle.toDouble()).toFloat())
-        fill.color = 0xFF22222BL.toInt()
-        canvas.drawRect(6f, -4.5f, 32f, 4.5f, fill)
-        canvas.restore()
-        fill.color = 0xFF8FA3B8L.toInt()
-        canvas.drawCircle(b.x, b.y, 8f, fill)
-        if (b.flash > 0f) {
-            val a = (b.flash / 0.12f).coerceIn(0f, 1f)
-            fill.color = 0xFFFFE08AL.toInt()
-            fill.alpha = (230 * a).toInt()
-            canvas.drawCircle(
-                b.x + cos(b.turretAngle) * 34f, b.y + sin(b.turretAngle) * 34f,
-                5f + 9f * a, fill
-            )
-            fill.alpha = 255
-        }
-    }
-
-    private fun drawBarracks(canvas: Canvas, b: Building, game: Game) {
-        val s = b.radius
-        fill.color = 0xFF54627EL.toInt()
-        canvas.drawRoundRect(b.x - s, b.y - s * 0.85f, b.x + s, b.y + s * 0.85f, 8f, 8f, fill)
-        stroke.color = 0xFF3A4560L.toInt()
-        stroke.strokeWidth = 3f
-        canvas.drawLine(b.x - s, b.y, b.x + s, b.y, stroke)
-        fill.color = 0xFF232A3EL.toInt()
-        canvas.drawRect(b.x - 11f, b.y + s * 0.85f - 22f, b.x + 11f, b.y + s * 0.85f, fill)
-        fill.color = 0xFFBFE3FFL.toInt()
-        canvas.drawRect(b.x - 30f, b.y - 14f, b.x - 14f, b.y - 2f, fill)
-        canvas.drawRect(b.x + 14f, b.y - 14f, b.x + 30f, b.y - 2f, fill)
-        val on = game.time % 1.4f < 0.7f
-        fill.color = if (on) hpGood else 0xFF2A6E46L.toInt()
-        canvas.drawCircle(b.x, b.y - s * 0.85f + 10f, 4f, fill)
     }
 
     // ---------------- HUD ----------------
