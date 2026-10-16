@@ -19,8 +19,8 @@ class Game {
     enum class Phase { BUILD, COMBAT }
 
     companion object {
-        const val WORLD_W = 2400f
-        const val WORLD_H = 1400f
+        const val WORLD_W = 1400f
+        const val WORLD_H = 2400f
         const val LOGISTICS_CAP = 40
         const val TOTAL_WAVES = 10
         const val BUILD_PHASE_TIME = 25f
@@ -45,13 +45,16 @@ class Game {
     private val spawnQueue: ArrayDeque<UnitKind> = ArrayDeque()
     private var spawnTimer = 0f
 
+    val spawnX = WORLD_W / 2f
+    val spawnY = 80f
+
     init {
-        val laneY = WORLD_H / 2f
+        val cx = WORLD_W / 2f
         waypoints = listOf(
-            Pair(WORLD_W - 140f, laneY),
-            Pair(WORLD_W * 0.62f, laneY - 130f),
-            Pair(WORLD_W * 0.38f, laneY + 130f),
-            Pair(460f, laneY)
+            Pair(cx, 420f),
+            Pair(cx - 130f, 950f),
+            Pair(cx + 130f, 1500f),
+            Pair(cx, 1940f)
         )
         reset()
     }
@@ -70,12 +73,14 @@ class Game {
         speed = 1f
         nextId = 1
         spawnTimer = 0f
-        val cy = WORLD_H / 2f
-        buildings.add(Building(nextId++, BuildingKind.COMMAND_CORE, Team.PLAYER, 230f, cy))
-        units.add(Unit(nextId++, UnitKind.CONSTRUCTOR, Team.PLAYER, 340f, cy - 100f))
-        units.add(Unit(nextId++, UnitKind.CONSTRUCTOR, Team.PLAYER, 340f, cy + 100f))
+        val cx = WORLD_W / 2f
+        val baseY = WORLD_H - 230f
+        buildings.add(Building(nextId++, BuildingKind.COMMAND_CORE, Team.PLAYER, cx, baseY))
+        units.add(Unit(nextId++, UnitKind.CONSTRUCTOR, Team.PLAYER, cx - 100f, baseY - 110f))
+        units.add(Unit(nextId++, UnitKind.CONSTRUCTOR, Team.PLAYER, cx + 100f, baseY - 110f))
+        val mx = floatArrayOf(cx - 140f, cx - 60f, cx + 60f, cx + 140f)
         repeat(4) { i ->
-            units.add(Unit(nextId++, UnitKind.MILITIA, Team.PLAYER, 440f, cy - 120f + i * 80f))
+            units.add(Unit(nextId++, UnitKind.MILITIA, Team.PLAYER, mx[i], baseY - 220f))
         }
     }
 
@@ -149,9 +154,8 @@ class Game {
             if (spawnTimer <= 0f) {
                 spawnTimer = SPAWN_INTERVAL
                 val kind = spawnQueue.removeFirst()
-                val laneY = WORLD_H / 2f
                 val jitter = (Math.random().toFloat() * 140f) - 70f
-                units.add(Unit(nextId++, kind, Team.ENEMY, WORLD_W - 60f, laneY + jitter))
+                units.add(Unit(nextId++, kind, Team.ENEMY, spawnX + jitter, spawnY))
             }
         }
 

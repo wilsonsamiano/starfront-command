@@ -20,7 +20,7 @@ app/src/main/java/com/wilson/starfront/
   Renderer.kt      — Canvas drawing: world, units, HUD, minimap, overlays
 ```
 
-No engine, no dependencies — pure Android Canvas. `minSdk 26`, landscape.
+No engine, no dependencies — pure Android Canvas. `minSdk 26`, portrait.
 
 ## Touch controls (M1)
 

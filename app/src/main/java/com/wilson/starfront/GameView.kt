@@ -49,9 +49,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     private fun fitCamera(w: Int, h: Int) {
         if (w == 0 || h == 0) return
-        ui.zoom = (minOf(w / Game.WORLD_W, h / Game.WORLD_H) * 0.96f).coerceIn(0.3f, 2.2f)
+        // portrait: fit the world width, start the camera on the player's base
+        ui.zoom = (w / Game.WORLD_W * 0.96f).coerceIn(0.3f, 2.2f)
         ui.camX = Game.WORLD_W / 2f
-        ui.camY = Game.WORLD_H / 2f
+        ui.camY = Game.WORLD_H - 550f
+        clampCamera()
     }
 
     private fun startThread() {

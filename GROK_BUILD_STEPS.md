@@ -25,7 +25,7 @@
 5. Install on the Onn tablet:
    - Copy the APK to the tablet (USB, Drive, or direct download).
    - Open it and allow "Install unknown apps" for the file manager / browser.
-   - The game launches in landscape, fullscreen.
+   - The game launches in portrait, fullscreen.
 
 ## Option B: build from GitHub
 

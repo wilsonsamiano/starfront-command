@@ -64,21 +64,22 @@ class Renderer {
             gy += 120f
         }
 
-        // lane path
+        // lane path (runs vertically in portrait)
         stroke.color = laneColor
         stroke.strokeWidth = 90f
-        var px = Game.WORLD_W - 60f
-        var py = Game.WORLD_H / 2f
+        var px = game.spawnX
+        var py = game.spawnY
         for (wp in game.waypoints) {
             canvas.drawLine(px, py, wp.first, wp.second, stroke)
             px = wp.first
             py = wp.second
         }
-        canvas.drawLine(px, py, 230f, Game.WORLD_H / 2f, stroke)
+        val core = game.playerCore()
+        if (core != null) canvas.drawLine(px, py, core.x, core.y, stroke)
 
         // enemy spawn marker
         fill.color = 0x44FF5A5AL.toInt()
-        canvas.drawCircle(Game.WORLD_W - 60f, Game.WORLD_H / 2f, 95f, fill)
+        canvas.drawCircle(game.spawnX, game.spawnY, 95f, fill)
 
         for (b in game.buildings) drawBuilding(canvas, b)
         for (u in game.units) drawUnit(canvas, u)
@@ -272,12 +273,13 @@ class Renderer {
             ui.buttons.add(UiState.HudButton("startWave", "START WAVE", r))
         }
 
-        // contextual action bar
+        // contextual action bar (button width shrinks to fit narrow screens)
         if (ui.actions.isNotEmpty()) {
-            val bw = 250f
             val bh = 84f
             val gap = 16f
-            val totalW = ui.actions.size * bw + (ui.actions.size - 1) * gap
+            val n = ui.actions.size
+            val bw = min(((w - 32f) - (n - 1) * gap) / n, 250f)
+            val totalW = n * bw + (n - 1) * gap
             var ax = (w - totalW) / 2f
             val ay = h - bh - 24f
             for (a in ui.actions) {
